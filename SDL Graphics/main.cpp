@@ -9,18 +9,36 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
 
+/* Prepare the pointers for window and renderer */
 static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
+
+static Uint64 startTime = 0;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char* argv[])
 {
+    /* Set up app metadata */
+    SDL_SetAppMetadata("SDL Graphics", "0.1", "name.stachu.SDL-Graphics");
+    /* Check if SDL Video works */
+    if (!SDL_Init(SDL_INIT_VIDEO)) {
+        SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
+        return SDL_APP_FAILURE;
+    }
     /* Create the window */
-    if (!SDL_CreateWindowAndRenderer("Hello world!", 800, 600, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer("SDL Graphics", 800, 600, SDL_WINDOW_FULLSCREEN, &window, &renderer)) {
         SDL_Log("Couldn't create a window and renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
     
+    /* Set start time */
+    startTime = SDL_GetTicks();
+    
+    /* Clear the screen with black */
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    
+    /* Go on with the program */
     return SDL_APP_CONTINUE;
 }
 
@@ -37,22 +55,25 @@ SDL_AppResult SDL_AppEvent(void *appevent, SDL_Event *event)
 /* This function runs once per frame, and is the heart of the program. */
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
-    const char *message = "Hello World!";
-    int w = 0, h = 0;
-    float x, y;
-    const float scale = 4.0f;
-    
-    /* Center the message and scale it up */
-    SDL_GetRenderOutputSize(renderer, &w, &h);
-    SDL_SetRenderScale(renderer, scale, scale);
-    x = ((w / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE * SDL_strlen(message)) / 2;
-    y = ((h / scale) - SDL_DEBUG_TEXT_FONT_CHARACTER_SIZE) / 2;
-    
-    /* Draw the message */
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    /* Clear the screan with changing rgb every second */
+    /* Get time (in seconds, minus start time, floored) */
+    const int now = (SDL_floor((SDL_GetTicks() - startTime) / 1000));
+    switch (now % 3) {
+        case 0:
+            SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
+            break;
+        case 1:
+            SDL_SetRenderDrawColor(renderer, 0, 255, 0, 255);
+            break;
+        case 2:
+            SDL_SetRenderDrawColor(renderer, 0, 0, 255, 255);
+            break;
+        default:
+            break;
+    }
     SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-    SDL_RenderDebugText(renderer, x, y, message);
+    
+    /* Swap buffers (show the image to the screen) */
     SDL_RenderPresent(renderer);
     
     return SDL_APP_CONTINUE;
