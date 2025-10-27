@@ -41,7 +41,7 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		295827A22EAEB6BB00A18EFA /* Exceptions for "Example code" folder in "SDL Graphics" target */ = {
+		295827C12EB01DAC00A18EFA /* Exceptions for "Example code" folder in "SDL Graphics" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				hello.c.txt,
@@ -51,7 +51,7 @@
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet section */
-		295827A32EAEB6BB00A18EFA /* Exceptions for "Example code" folder in "Compile Sources" phase from "SDL Graphics" target */ = {
+		295827C22EB01DAC00A18EFA /* Exceptions for "Example code" folder in "Compile Sources" phase from "SDL Graphics" target */ = {
 			isa = PBXFileSystemSynchronizedGroupBuildPhaseMembershipExceptionSet;
 			buildPhase = 2958276F2EAE2C2600A18EFA /* Sources */;
 			membershipExceptions = (
@@ -69,8 +69,8 @@
 		295827A12EAEB69C00A18EFA /* Example code */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				295827A22EAEB6BB00A18EFA /* Exceptions for "Example code" folder in "SDL Graphics" target */,
-				295827A32EAEB6BB00A18EFA /* Exceptions for "Example code" folder in "Compile Sources" phase from "SDL Graphics" target */,
+				295827C12EB01DAC00A18EFA /* Exceptions for "Example code" folder in "SDL Graphics" target */,
+				295827C22EB01DAC00A18EFA /* Exceptions for "Example code" folder in "Compile Sources" phase from "SDL Graphics" target */,
 			);
 			path = "Example code";
 			sourceTree = "<group>";
