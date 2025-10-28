@@ -4,18 +4,20 @@
 //
 //  Created by Stachu on 26.10.2025.
 //
-//  TODO:
-//  - average fps / frametime
-//  - try microseconds instead of nanoseconds
+//  TODO:   (remember to change the version number)
+//  - log render time
 //  - measure average runtime of:
 //     - now().time_since_epoch()
 //     - std::chrono::nanoseconds subtraction
 //     - std::this_thread::sleep_for()
+//  - start making new files with rendering functions
 //
 //  DONE:
-//  - frame time and fps counter
-//  - frame time limiter
+//  - try microseconds instead of nanoseconds (not possible with std::chrono::steady_clock)
+//  - average fps / frametime
 //  - changed SDL_GetTicks() (in milliseconds) to std::chrono::high_resolution_clock().now().time_since_epoch() (in nanoseconds) instead of to clock() (in microseconds and didn't work properly)
+//  - frame time limiter
+//  - frame time and fps counter
 
 #define SDL_MAIN_USE_CALLBACKS 1    /* use the callbacks instead of main() */
 #include <SDL3/SDL.h>
@@ -36,6 +38,10 @@ static std::chrono::nanoseconds programStart_timestamp;
 static std::chrono::steady_clock perfClock;
 static std::chrono::nanoseconds lastFrame_timestamp;
 static std::chrono::nanoseconds frameTime;
+/* average frame time / fps */
+static const unsigned int frameTimeArraySize = 300;
+static std::chrono::nanoseconds frameTimeArray[frameTimeArraySize];
+static unsigned int frameCount = 0;
 /* fps limit */
 static std::chrono::nanoseconds lastSwap_timestamp;
 static std::chrono::nanoseconds frameRenderTime;
@@ -44,7 +50,7 @@ static std::chrono::nanoseconds frameRenderTime;
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char* argv[])
 {
     /* Set up app metadata */
-    SDL_SetAppMetadata("SDL Graphics", "0.1.1", "name.stachu.SDL-Graphics");
+    SDL_SetAppMetadata("SDL Graphics", "0.1.2", "name.stachu.SDL-Graphics");
     /* Check if SDL Video works */
     if (!SDL_Init(SDL_INIT_VIDEO)) {
         SDL_Log("Couldn't initialize SDL: %s", SDL_GetError());
@@ -84,7 +90,7 @@ SDL_AppResult SDL_AppEvent(void *appevent, SDL_Event *event)
 SDL_AppResult SDL_AppIterate(void *appstate)
 {
     /*   Clear the screan with changing rgb every second */
-    /* get time (in seconds, minus start time, floored) */
+    /* get time from start in seconds (converted from nanoseconds) floored */
     const int now = floor(((perfClock.now().time_since_epoch() - programStart_timestamp).count()) / 1000000000);
     switch (now % 3) {
         case 0:
@@ -109,12 +115,23 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     lastSwap_timestamp = perfClock.now().time_since_epoch();  /* save swap timestamp for fps limit */
     SDL_RenderPresent(renderer);
     
-    /* Count frame time (in nanoseconds) */
+    /* Count frametime (in nanoseconds) */
     frameTime = perfClock.now().time_since_epoch() - lastFrame_timestamp;
     lastFrame_timestamp = perfClock.now().time_since_epoch();
-    /* Log frame time and fps */
-    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "frame time (milliseconds): %.3f", (double)std::chrono::nanoseconds(frameTime).count() / 1000000);
-    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "fps: %.3f", (1000000000 / (double)std::chrono::nanoseconds(frameTime).count()));
+    /* Log framerate and frametime (in milliseconds) */
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "framerate: %.3f fps", 1000000000 / (double)frameTime.count());
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "frametime: %.3f ms", (double)frameTime.count() / 1000000);
+    /* Count average frametime (in microseconds) */
+    frameTimeArray[frameCount % frameTimeArraySize] = frameTime;
+    long long avgFrameTime = 0;
+    for (int i = 0; i < frameTimeArraySize; i++) {
+        avgFrameTime += frameTimeArray[i].count() / 1000;  /* switch to microseconds */
+    }
+    avgFrameTime /= frameTimeArraySize;
+    frameCount++;
+    /* Log average framerate frametime (in milliseconds) */
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "avg framerate: %.3f fps", 1000000 / (double)avgFrameTime);
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "avg frametime: %.3f ms", (double)avgFrameTime / 1000);
     
     return SDL_APP_CONTINUE;
 }
