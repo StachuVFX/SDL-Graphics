@@ -5,12 +5,17 @@
 //  Created by Stachu on 26.10.2025.
 //
 //  TODO:
-//  - try changing SDL_GetTicks():Uint64 to clock():clock_t (requires <ctime>)
+//  - average fps / frametime
+//  - try microseconds instead of nanoseconds
+//  - measure average runtime of:
+//     - now().time_since_epoch()
+//     - std::chrono::nanoseconds subtraction
+//     - std::this_thread::sleep_for()
 //
 //  DONE:
-//  - filling the screen with changing colors
 //  - frame time and fps counter
 //  - frame time limiter
+//  - changed SDL_GetTicks() (in milliseconds) to std::chrono::high_resolution_clock().now().time_since_epoch() (in nanoseconds) instead of to clock() (in microseconds and didn't work properly)
 
 #define SDL_MAIN_USE_CALLBACKS 1    /* use the callbacks instead of main() */
 #include <SDL3/SDL.h>
@@ -26,13 +31,14 @@ static SDL_Window *window = NULL;
 static SDL_Renderer *renderer = NULL;
 
 /* Prepare variables for time features */
-static Uint64 programStart_timestamp = 0;
-/* frame time / fps */
-static Uint64 lastFrame_timestamp = 0;
-static Uint64 frameTime = 0;
+static std::chrono::nanoseconds programStart_timestamp;
+/* frame time / fps (in nanoseconds with std::chrono::high_resolution_clock().now().time_since_epoch()) */
+static std::chrono::steady_clock perfClock;
+static std::chrono::nanoseconds lastFrame_timestamp;
+static std::chrono::nanoseconds frameTime;
 /* fps limit */
-static Uint64 lastSwap_timestamp = 0;
-static Uint64 frameRenderTime = 0;
+static std::chrono::nanoseconds lastSwap_timestamp;
+static std::chrono::nanoseconds frameRenderTime;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char* argv[])
@@ -51,9 +57,10 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char* argv[])
     }
     
     /* Set timestamps */
-    programStart_timestamp = SDL_GetTicks();
-    lastFrame_timestamp = SDL_GetTicks();  /* just in case */
-    lastSwap_timestamp = SDL_GetTicks();  /* just in case */
+    perfClock = std::chrono::high_resolution_clock();
+    programStart_timestamp = perfClock.now().time_since_epoch();
+    lastSwap_timestamp = perfClock.now().time_since_epoch();  /* just in case */
+    lastFrame_timestamp = perfClock.now().time_since_epoch();  /* just in case */
     
     /* Clear the screen with black */
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -78,7 +85,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 {
     /*   Clear the screan with changing rgb every second */
     /* get time (in seconds, minus start time, floored) */
-    const int now = (SDL_floor((SDL_GetTicks() - programStart_timestamp) / 1000));
+    const int now = floor(((perfClock.now().time_since_epoch() - programStart_timestamp).count()) / 1000000000);
     switch (now % 3) {
         case 0:
             SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255);
@@ -94,20 +101,20 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     }
     SDL_RenderClear(renderer);
     
-    /* Limit fps */
-    frameRenderTime = SDL_GetTicks() - lastSwap_timestamp;
-    std::this_thread::sleep_for(std::chrono::milliseconds(16 - frameRenderTime));
+    /* Limit fps to 60 (sleep til 16.666666ms (adjusted) before swapping) */
+    frameRenderTime = perfClock.now().time_since_epoch() - lastSwap_timestamp;
+    std::this_thread::sleep_for(std::chrono::nanoseconds(15666000) - frameRenderTime);
     
     /* Swap buffers (show the image to the screen) */
-    lastSwap_timestamp = SDL_GetTicks();  /* save swap timestamp */
+    lastSwap_timestamp = perfClock.now().time_since_epoch();  /* save swap timestamp for fps limit */
     SDL_RenderPresent(renderer);
     
-    /* Count frame time */
-    frameTime = SDL_GetTicks() - lastFrame_timestamp;
-    lastFrame_timestamp = SDL_GetTicks();
+    /* Count frame time (in nanoseconds) */
+    frameTime = perfClock.now().time_since_epoch() - lastFrame_timestamp;
+    lastFrame_timestamp = perfClock.now().time_since_epoch();
     /* Log frame time and fps */
-    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "frame time: %d", (int)frameTime);
-    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "fps: %d", (int)(1000 / (int)frameTime));
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "frame time (milliseconds): %.3f", (double)std::chrono::nanoseconds(frameTime).count() / 1000000);
+    SDL_LogDebug(SDL_LOG_CATEGORY_TEST, "fps: %.3f", (1000000000 / (double)std::chrono::nanoseconds(frameTime).count()));
     
     return SDL_APP_CONTINUE;
 }
